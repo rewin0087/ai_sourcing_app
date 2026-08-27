@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_01_01_000010) do
+ActiveRecord::Schema[7.2].define(version: 2024_02_02_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
   enable_extension "vector"
@@ -87,6 +87,16 @@ ActiveRecord::Schema[7.2].define(version: 2024_01_01_000010) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["candidate_id"], name: "index_certifications_on_candidate_id"
+  end
+
+  create_table "chat_sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "title", default: ""
+    t.jsonb "messages", default: []
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "updated_at"], name: "index_chat_sessions_on_user_id_and_updated_at"
+    t.index ["user_id"], name: "index_chat_sessions_on_user_id"
   end
 
   create_table "educations", force: :cascade do |t|
@@ -179,6 +189,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_01_01_000010) do
   add_foreign_key "candidate_skills", "candidates"
   add_foreign_key "candidates", "users"
   add_foreign_key "certifications", "candidates"
+  add_foreign_key "chat_sessions", "users"
   add_foreign_key "educations", "candidates"
   add_foreign_key "job_descriptions", "users"
   add_foreign_key "work_experiences", "candidates"

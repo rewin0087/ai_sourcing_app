@@ -32,6 +32,12 @@ Rails.application.routes.draw do
         get "jobs", to: "jobs#index"
         get "jobs/:id", to: "jobs#show"
         delete "jobs/:id", to: "jobs#destroy"
+
+        # AI Chat
+        get  "chat/sessions",     to: "chat#sessions"
+        get  "chat/sessions/:id", to: "chat#show"
+        post "chat/message",      to: "chat#message"
+        delete "chat/sessions/:id", to: "chat#destroy"
       end
     end
   end

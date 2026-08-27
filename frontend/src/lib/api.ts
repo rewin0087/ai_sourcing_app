@@ -210,6 +210,45 @@ export const candidateApi = {
   deleteCertification: (id: number) => api.delete(`/certifications/${id}`),
 };
 
+// ── Chat types ──────────────────────────────────────────────────────────────
+
+export type ChatCandidateSummary = {
+  id: number;
+  full_name: string;
+  current_title?: string;
+  location?: string;
+  total_experience_years: number;
+  skills: { name: string; proficiency?: string }[];
+};
+
+export type ChatStats = {
+  type:
+    | "database_summary"
+    | "experience_report"
+    | "role_distribution"
+    | "skill_report"
+    | "top_skills_by_category";
+  data: Record<string, unknown>;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  candidates?: ChatCandidateSummary[];
+  stats?: ChatStats;
+  timestamp: string;
+};
+
+export type ChatSession = {
+  id: number;
+  title: string;
+  message_count: number;
+  last_message?: string;
+  updated_at: string;
+  created_at: string;
+};
+
 export type RefinedJobDescription = {
   title: string;
   experience_level: string;
@@ -227,6 +266,19 @@ export type RefinedJobDescription = {
 export const sourcingApi = {
   refineJob: (narrative: string) =>
     api.post<{ data: RefinedJobDescription }>("/sourcing/refine-job", { narrative }),
+
+  // Chat
+  getChatSessions: () =>
+    api.get<{ data: ChatSession[] }>("/sourcing/chat/sessions"),
+  getChatSession: (id: number) =>
+    api.get<{ data: { id: number; title: string; messages: ChatMessage[]; created_at: string } }>(`/sourcing/chat/sessions/${id}`),
+  sendChatMessage: (message: string, sessionId?: number) =>
+    api.post<{ data: { session_id: number; message: ChatMessage } }>("/sourcing/chat/message", {
+      message,
+      session_id: sessionId,
+    }),
+  deleteChatSession: (id: number) => api.delete(`/sourcing/chat/sessions/${id}`),
+
   parseJob: (text?: string, file?: File) => {
     if (file) {
       const form = new FormData();

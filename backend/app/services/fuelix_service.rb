@@ -50,6 +50,33 @@ class FuelixService
     content
   end
 
+  # Multi-turn chat with full messages array (supports system role)
+  def chat_complete(messages, model: DEFAULT_MODEL, temperature: 0.7, max_tokens: 4096, timeout: 120)
+    Rails.logger.info("[FuelixService] CHAT_REQUEST model=#{model} messages=#{messages.length}")
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    response = @conn.post("/v1/chat/completions") do |req|
+      req.headers["Authorization"] = "Bearer #{API_KEY}"
+      req.headers["Content-Type"] = "application/json"
+      req.options.timeout = timeout
+      req.body = {
+        model: model,
+        messages: messages,
+        temperature: temperature,
+        max_tokens: max_tokens
+      }
+    end
+
+    elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at).round(2)
+    Rails.logger.info("[FuelixService] CHAT_RESPONSE status=#{response.status} elapsed=#{elapsed}s")
+    raise "FuelIX API error: #{response.status}" unless response.success?
+
+    body = response.body
+    body.dig("choices", 0, "message", "content") ||
+      body.dig("choices", 0, "text") ||
+      raise("No content in FuelIX response")
+  end
+
   def extract_json(prompt, **opts)
     raw = complete(prompt, **opts, temperature: 0)
     cleaned = raw.gsub(/```json\s*/i, "").gsub(/```\s*$/, "").strip

@@ -13,6 +13,7 @@ import {
   MenuIcon,
   XIcon,
   WandSparklesIcon,
+  BotIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 
 const navItems = [
   { label: "Dashboard", href: "/sourcer", icon: LayoutDashboardIcon, exact: true },
+  { label: "AI Assistant", href: "/sourcer/chat", icon: BotIcon },
   { label: "Refine JD", href: "/sourcer/refine", icon: WandSparklesIcon },
   { label: "Find Candidates", href: "/sourcer/search", icon: SearchIcon },
   { label: "Candidates DB", href: "/sourcer/candidates", icon: UsersIcon },
