@@ -13,8 +13,8 @@ class CreateWorkExperiences < ActiveRecord::Migration[7.2]
       t.date :start_date
       t.date :end_date
 
-      # Embedding of the combined job experience for vector search
-      t.column :embedding, :vector, limit: 1536
+      # Embedding stored as JSON array (1536 floats)
+      t.json :embedding
 
       t.timestamps
     end

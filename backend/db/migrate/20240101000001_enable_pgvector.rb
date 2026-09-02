@@ -1,9 +1,5 @@
+# No-op: was PostgreSQL pgvector extension — not needed for MySQL
 class EnablePgvector < ActiveRecord::Migration[7.2]
-  def up
-    enable_extension "vector"
-  end
-
-  def down
-    disable_extension "vector"
-  end
+  def up; end
+  def down; end
 end

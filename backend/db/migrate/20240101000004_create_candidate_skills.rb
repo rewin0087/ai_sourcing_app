@@ -13,8 +13,8 @@ class CreateCandidateSkills < ActiveRecord::Migration[7.2]
       t.string :certification, default: "No" # Yes | No
       t.string :delivered_projects # Less than 5 | 5 - 10 | More than 10
 
-      # Embedding for vector similarity
-      t.column :embedding, :vector, limit: 1536
+      # Embedding stored as JSON array (1536 floats)
+      t.json :embedding
 
       t.timestamps
     end

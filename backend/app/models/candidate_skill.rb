@@ -6,8 +6,6 @@ class CandidateSkill < ApplicationRecord
   SKILL_TYPES = %w[Primary Secondary Tertiary].freeze
   CATEGORIES = ["Languages", "Backend", "Frontend", "Databases", "Cloud & DevOps", "Testing", "Source Control", "AI & LLM Tools", "Other"].freeze
 
-  has_neighbors :embedding
-
   validates :name, presence: true
   validates :proficiency, inclusion: { in: PROFICIENCY_LEVELS }, allow_blank: true
   validates :skill_type, inclusion: { in: SKILL_TYPES }, allow_blank: true

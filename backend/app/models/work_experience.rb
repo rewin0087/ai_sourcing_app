@@ -2,8 +2,6 @@ class WorkExperience < ApplicationRecord
   belongs_to :candidate
   has_many :work_projects, dependent: :destroy
 
-  has_neighbors :embedding
-
   validates :company_name, :job_title, presence: true
 
   EMPLOYMENT_TYPES = { 1 => "Full-time", 2 => "Part-time", 3 => "Contract" }.freeze

@@ -170,6 +170,8 @@ class CandidateAnalyticsService
     ["Intern \/ Trainee",         /\bintern\b|\btrainee\b|graduate\s?program/i],
   ].freeze
 
+  include VectorSimilarity
+
   def initialize
     @ai = FuelixService.new
   end
@@ -239,14 +241,11 @@ class CandidateAnalyticsService
 
   def search_candidates(query, limit: 8)
     query_embedding = @ai.embed(query)
+    return [] unless query_embedding
 
-    candidates = Candidate
-      .where.not(profile_embedding: nil)
-      .nearest_neighbors(:profile_embedding, query_embedding, distance: "cosine")
-      .limit(limit)
-      .includes(:candidate_skills, :work_experiences)
-
-    candidates.map { |c| candidate_summary(c) }
+    scope = Candidate.includes(:candidate_skills, :work_experiences)
+    results = vector_search(scope, :profile_embedding, query_embedding, limit: limit)
+    results.map { |r| candidate_summary(r[:record]) }
   rescue StandardError => e
     Rails.logger.error("[CandidateAnalyticsService] search_candidates failed: #{e.message}")
     []
@@ -331,10 +330,8 @@ class CandidateAnalyticsService
             SUM(
               CASE
                 WHEN end_date IS NOT NULL
-                  THEN (EXTRACT(YEAR FROM AGE(end_date, start_date)) * 12 +
-                        EXTRACT(MONTH FROM AGE(end_date, start_date)))::INTEGER
-                ELSE  (EXTRACT(YEAR FROM AGE(CURRENT_DATE, start_date)) * 12 +
-                        EXTRACT(MONTH FROM AGE(CURRENT_DATE, start_date)))::INTEGER
+                  THEN TIMESTAMPDIFF(MONTH, start_date, end_date)
+                ELSE  TIMESTAMPDIFF(MONTH, start_date, CURDATE())
               END
             ) AS total_months
           FROM work_experiences
@@ -346,7 +343,7 @@ class CandidateAnalyticsService
       ORDER BY count DESC
     SQL
 
-    result = ActiveRecord::Base.connection.execute(sql)
+    result = ActiveRecord::Base.connection.select_all(sql)
     result.each_with_object({}) { |row, h| h[row["level"]] = row["count"].to_i }
   rescue StandardError
     {}
@@ -360,10 +357,8 @@ class CandidateAnalyticsService
           SUM(
             CASE
               WHEN end_date IS NOT NULL
-                THEN (EXTRACT(YEAR FROM AGE(end_date, start_date)) * 12 +
-                      EXTRACT(MONTH FROM AGE(end_date, start_date)))::INTEGER
-              ELSE  (EXTRACT(YEAR FROM AGE(CURRENT_DATE, start_date)) * 12 +
-                      EXTRACT(MONTH FROM AGE(CURRENT_DATE, start_date)))::INTEGER
+                THEN TIMESTAMPDIFF(MONTH, start_date, end_date)
+              ELSE  TIMESTAMPDIFF(MONTH, start_date, CURDATE())
             END
           ) AS total_months
         FROM work_experiences
@@ -372,7 +367,7 @@ class CandidateAnalyticsService
       ) exp
     SQL
 
-    result = ActiveRecord::Base.connection.execute(sql)
+    result = ActiveRecord::Base.connection.select_all(sql)
     result.first&.fetch("avg_years", 0).to_f.round(1)
   rescue StandardError
     0

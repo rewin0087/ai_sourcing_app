@@ -21,8 +21,8 @@ class CreateCandidates < ActiveRecord::Migration[7.2]
       t.string :portfolio_url
       t.string :resume_url
 
-      # Profile embedding for vector similarity search (1536 dimensions for text-embedding-ada-002 compatible)
-      t.column :profile_embedding, :vector, limit: 1536
+      # Profile embedding stored as JSON array (1536 floats); cosine similarity computed in Ruby
+      t.json :profile_embedding
 
       t.timestamps
     end

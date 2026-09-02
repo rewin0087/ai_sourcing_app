@@ -5,8 +5,6 @@ class Candidate < ApplicationRecord
   has_many :educations, dependent: :destroy
   has_many :certifications, dependent: :destroy
 
-  has_neighbors :profile_embedding
-
   def full_name
     [first_name, middle_name, last_name].compact.join(" ")
   end

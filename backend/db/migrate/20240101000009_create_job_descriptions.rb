@@ -8,23 +8,23 @@ class CreateJobDescriptions < ActiveRecord::Migration[7.2]
       t.string :location
       t.string :employment_type
       t.text :raw_text, null: false
-      t.jsonb :parsed_data, default: {}
+      t.json :parsed_data
 
       # Extracted structured fields
       t.text :summary
       t.text :responsibilities
       t.text :qualifications
       t.text :about_company
-      t.jsonb :required_skills, default: []   # [{name, proficiency, years_required, required}]
-      t.jsonb :preferred_skills, default: []
+      t.json :required_skills   # [{name, proficiency, years_required, required}]
+      t.json :preferred_skills
       t.string :salary_range
       t.string :experience_level  # entry | mid | senior | lead
 
       # Status tracking
       t.string :status, default: "pending"  # pending | processing | completed | failed
 
-      # Embedding for candidate matching
-      t.column :embedding, :vector, limit: 1536
+      # Embedding stored as JSON array (1536 floats); cosine similarity computed in Ruby
+      t.json :embedding
 
       t.timestamps
     end

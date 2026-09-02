@@ -2,9 +2,11 @@ class JobDescription < ApplicationRecord
   belongs_to :user
   has_many :candidate_job_matches, dependent: :destroy
 
-  has_neighbors :embedding
-
   validates :raw_text, presence: true
+
+  attribute :parsed_data,     :json, default: {}
+  attribute :required_skills, :json, default: []
+  attribute :preferred_skills, :json, default: []
 
   STATUSES = %w[pending processing completed failed].freeze
   EXPERIENCE_LEVELS = %w[entry mid senior lead].freeze

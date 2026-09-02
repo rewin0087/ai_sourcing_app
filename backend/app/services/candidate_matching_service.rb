@@ -33,6 +33,8 @@ class CandidateMatchingService
     ]
   PROMPT
 
+  include VectorSimilarity
+
   def initialize
     @ai = FuelixService.new
   end
@@ -63,19 +65,12 @@ class CandidateMatchingService
   private
 
   def find_similar_candidates(job_description, limit:)
-    embedding = job_description.embedding
-    return [] unless embedding
+    job_vec = job_description.embedding
+    return [] unless job_vec.is_a?(Array) && job_vec.any?
 
-    Candidate
-      .where.not(profile_embedding: nil)
-      .nearest_neighbors(:profile_embedding, embedding, distance: "cosine")
-      .limit(limit)
-      .map do |candidate|
-        {
-          candidate: candidate,
-          similarity_score: candidate.neighbor_distance.present? ? (1 - candidate.neighbor_distance.to_f).round(4) : 0.0
-        }
-      end
+    scope = Candidate.includes(:candidate_skills, :work_experiences)
+    results = vector_search(scope, :profile_embedding, job_vec, limit: limit)
+    results.map { |r| { candidate: r[:record], similarity_score: r[:similarity].round(4) } }
   rescue StandardError => e
     Rails.logger.error("Vector search failed: #{e.message}")
     []
@@ -189,8 +184,8 @@ class CandidateMatchingService
           overall_score: item[:overall_score],
           rank: item[:rank],
           ai_reasoning: item[:ai_reasoning],
-          matched_skills: item[:matched_skills].to_json,
-          missing_skills: item[:missing_skills].to_json,
+          matched_skills: item[:matched_skills],
+          missing_skills: item[:missing_skills],
           created_at: Time.current,
           updated_at: Time.current
         },

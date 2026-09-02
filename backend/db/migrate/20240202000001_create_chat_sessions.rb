@@ -3,7 +3,7 @@ class CreateChatSessions < ActiveRecord::Migration[7.2]
     create_table :chat_sessions do |t|
       t.references :user, null: false, foreign_key: true
       t.string :title, default: ""
-      t.jsonb :messages, default: []
+      t.json :messages
 
       t.timestamps
     end

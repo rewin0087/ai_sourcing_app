@@ -10,8 +10,8 @@ class CreateCandidateJobMatches < ActiveRecord::Migration[7.2]
       t.float :overall_score, default: 0.0
       t.integer :rank
       t.text :ai_reasoning
-      t.jsonb :matched_skills, default: []
-      t.jsonb :missing_skills, default: []
+      t.json :matched_skills
+      t.json :missing_skills
 
       t.timestamps
     end
