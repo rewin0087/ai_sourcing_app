@@ -191,6 +191,8 @@ GEM
     minitest (5.27.0)
     msgpack (1.8.4)
     multipart-post (2.4.1)
+    neighbor (1.2.0)
+      activerecord (>= 7.2)
     net-http (0.9.1)
       uri (>= 0.11.1)
     net-imap (0.6.6)
@@ -392,6 +394,7 @@ DEPENDENCIES
   faraday
   faraday-multipart
   kaminari
+  neighbor
   oj
   pdf-reader
   pg (~> 1.1)
