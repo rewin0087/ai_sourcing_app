@@ -1,11 +1,10 @@
 default: &default
-  adapter: mysql2
-  encoding: utf8mb4
-  collation: utf8mb4_unicode_ci
+  adapter: postgresql
+  encoding: unicode
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   host: <%= ENV.fetch("DB_HOST", "localhost") %>
-  port: <%= ENV.fetch("DB_PORT", 3306) %>
-  username: <%= ENV.fetch("DB_USERNAME", "root") %>
+  port: <%= ENV.fetch("DB_PORT", 5432) %>
+  username: <%= ENV.fetch("DB_USERNAME", "") %>
   password: <%= ENV.fetch("DB_PASSWORD", "") %>
 
 development:
