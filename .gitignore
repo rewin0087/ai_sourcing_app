@@ -24,7 +24,8 @@ backend/log/
 
 # ── Ruby / Rails ───────────────────────────────────────────────────────────
 backend/.bundle/
-backend/tmp/
+backend/tmp/*
+!backend/tmp/.keep
 backend/storage/
 backend/public/system/
 backend/public/uploads/
