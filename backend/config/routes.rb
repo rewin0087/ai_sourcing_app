@@ -38,6 +38,9 @@ Rails.application.routes.draw do
         get  "chat/sessions/:id", to: "chat#show"
         post "chat/message",      to: "chat#message"
         delete "chat/sessions/:id", to: "chat#destroy"
+
+        # CSV exports (token-based, no auth required)
+        get "exports/csv", to: "exports#csv"
       end
     end
   end

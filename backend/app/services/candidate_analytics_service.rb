@@ -289,7 +289,106 @@ class CandidateAnalyticsService
     nil
   end
 
+  # ── CSV Export ─────────────────────────────────────────────────────────────
+
+  # Returns a signed, URL-safe token embedding the export parameters.
+  # The token uses urlsafe Base64 (no +, /, = characters) so it survives
+  # being embedded in URLs, HTML, and LLM responses without encoding issues.
+  def export_csv(type:, **params)
+    build_export_data(type, params)  # validate early before issuing token
+
+    payload = { type: type.to_s, params: params.transform_keys(&:to_s), expires_at: 15.minutes.from_now.to_i }
+    token = verifier.generate(payload)
+
+    {
+      token:        token,
+      filename:     export_filename(type, params),
+      download_url: "/api/v1/sourcing/exports/csv?token=#{token}",
+      record_count: nil,
+      expires_in:   "15 minutes"
+    }
+  end
+
+  # Called by ExportsController — verifies the signed token and generates the CSV.
+  def self.generate_csv_from_token(raw_token)
+    payload = verifier.verify(raw_token)
+    payload = payload.transform_keys(&:to_sym) if payload.respond_to?(:transform_keys)
+    raise "Export link has expired." if Time.now.to_i > payload[:expires_at].to_i
+
+    type   = payload[:type].to_s
+    params = (payload[:params] || {}).transform_keys(&:to_sym)
+
+    svc = new
+    data, filename = svc.send(:build_export_data, type, params)
+    csv  = CsvExportService.new.generate(type, data)
+    { csv: csv, filename: filename }
+  rescue ActiveSupport::MessageVerifier::InvalidSignature,
+         ActiveSupport::MessageVerifier::InvalidMessage
+    nil
+  rescue StandardError => e
+    Rails.logger.error("[CandidateAnalyticsService] generate_csv_from_token failed: #{e.message}")
+    nil
+  end
+
   private
+
+  # Urlsafe verifier — produces tokens with only [A-Za-z0-9_-] characters.
+  # No percent-encoding needed, safe to embed in URLs and HTML as-is.
+  def verifier
+    self.class.verifier
+  end
+
+  def self.verifier
+    Rails.application.message_verifier(:csv_export, serializer: JSON, url_safe: true)
+  rescue ArgumentError
+    # url_safe option not supported in this Rails version — fall back to standard verifier
+    Rails.application.message_verifier(:csv_export, serializer: JSON)
+  end
+
+  def export_filename(type, params)
+    case type.to_s
+    when "candidates"     then "candidates_#{params[:query].to_s.parameterize.truncate(30, omission: '')}.csv"
+    when "skill_report"   then "skill_report_#{params[:skill].to_s.parameterize}.csv"
+    when "experience_report" then "experience_report.csv"
+    when "role_distribution" then "role_distribution.csv"
+    when "database_summary"  then "database_summary.csv"
+    when "top_skills_by_category" then "top_skills_by_category.csv"
+    else "export.csv"
+    end
+  end
+
+  def build_export_data(type, params)
+    case type.to_s
+    when "candidates"
+      query = params[:query].to_s.strip
+      limit = (params[:limit] || 50).to_i.clamp(1, 200)
+      raise ArgumentError, "'query' is required for candidates export" if query.blank?
+      data = search_candidates(query, limit: limit)
+      [data, "candidates_#{query.parameterize.truncate(30, omission: '')}.csv"]
+
+    when "skill_report"
+      skill = params[:skill].to_s.strip
+      raise ArgumentError, "'skill' is required for skill_report export" if skill.blank?
+      data = skill_report(skill)
+      [data, "skill_report_#{skill.parameterize}.csv"]
+
+    when "experience_report"
+      [experience_report, "experience_report.csv"]
+
+    when "role_distribution"
+      [role_distribution, "role_distribution.csv"]
+
+    when "database_summary"
+      [database_summary, "database_summary.csv"]
+
+    when "top_skills_by_category"
+      limit = (params[:limit] || 10).to_i
+      [top_skills_by_category(limit: limit), "top_skills_by_category.csv"]
+
+    else
+      raise ArgumentError, "Unknown export type '#{type}'. Valid types: candidates, skill_report, experience_report, role_distribution, database_summary, top_skills_by_category"
+    end
+  end
 
   def candidate_summary(c)
     total_months = c.work_experiences.sum { |w| experience_months(w) }

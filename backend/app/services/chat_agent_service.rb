@@ -46,6 +46,18 @@ class ChatAgentService
     Params: id (integer).
     <tool_call>{"tool": "get_candidate", "params": {"id": 42}}</tool_call>
 
+    ### export_csv
+    Generate a downloadable CSV report. Call this when the user asks to download, export, or save a report.
+    Always run the relevant report tool FIRST to show the user the data, then call export_csv to provide the download link.
+    Params:
+      type (string, required) — one of: candidates, skill_report, experience_report, role_distribution, database_summary, top_skills_by_category
+      query (string) — required when type is "candidates"; the search query
+      skill (string) — required when type is "skill_report"
+      limit (integer) — optional; max records for candidates export (default 50, max 200)
+    <tool_call>{"tool": "export_csv", "params": {"type": "candidates", "query": "senior React developer", "limit": 50}}</tool_call>
+    <tool_call>{"tool": "export_csv", "params": {"type": "skill_report", "skill": "React"}}</tool_call>
+    <tool_call>{"tool": "export_csv", "params": {"type": "role_distribution"}}</tool_call>
+
     ## Behavior Guidelines
     1. **Clarify before searching** — if the user's request is vague, ask 1-2 focused questions first.
     2. **Use the right tool** — analytics questions use report tools; "find me someone" uses search_candidates.
@@ -93,6 +105,7 @@ class ChatAgentService
 
     accumulated_candidates = nil
     accumulated_stats = nil
+    accumulated_exports = []
 
     MAX_ITERATIONS.times do
       response_text = @ai.chat_complete(messages, max_tokens: 4096, timeout: 120)
@@ -102,9 +115,10 @@ class ChatAgentService
       if tool_calls.empty?
         clean = strip_tool_calls(response_text)
         return {
-          content: clean,
+          content:    clean,
           candidates: accumulated_candidates,
-          stats: accumulated_stats
+          stats:      accumulated_stats,
+          exports:    accumulated_exports.presence
         }
       end
 
@@ -113,7 +127,8 @@ class ChatAgentService
       tool_calls.each do |tc|
         result = execute_tool(tc)
         accumulated_candidates = result[:candidates] if result[:candidates]
-        accumulated_stats = result[:stats] if result[:stats]
+        accumulated_stats      = result[:stats]      if result[:stats]
+        accumulated_exports << result[:export]       if result[:export]
         tool_results_parts << "=== Tool: #{tc['tool']} ===\n#{result[:text]}"
       end
 
@@ -129,16 +144,18 @@ class ChatAgentService
     end
 
     {
-      content: "I had trouble processing that request. Please try rephrasing your question.",
+      content:    "I had trouble processing that request. Please try rephrasing your question.",
       candidates: accumulated_candidates,
-      stats: accumulated_stats
+      stats:      accumulated_stats,
+      exports:    accumulated_exports.presence
     }
   rescue StandardError => e
     Rails.logger.error("[ChatAgentService] process failed: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
     {
-      content: "Sorry, I encountered an error while processing your request. Please try again.",
+      content:    "Sorry, I encountered an error while processing your request. Please try again.",
       candidates: nil,
-      stats: nil
+      stats:      nil,
+      exports:    nil
     }
   end
 
@@ -214,8 +231,15 @@ class ChatAgentService
       return { text: "Candidate with ID #{id} not found." } if candidate.nil?
       { text: format_candidate_detail(candidate), candidates: [candidate] }
 
+    when "export_csv"
+      type  = params["type"].to_s.strip
+      return { text: "Error: 'type' parameter is required for export_csv." } if type.blank?
+      kw = params.transform_keys(&:to_sym).except(:type)
+      result = @analytics.export_csv(type: type, **kw)
+      { text: format_export(result), export: result }
+
     else
-      { text: "Unknown tool '#{tool}'. Available tools: database_summary, experience_report, role_distribution, skill_report, top_skills_by_category, search_candidates, get_candidate." }
+      { text: "Unknown tool '#{tool}'. Available tools: database_summary, experience_report, role_distribution, skill_report, top_skills_by_category, search_candidates, get_candidate, export_csv." }
     end
   rescue StandardError => e
     Rails.logger.error("[ChatAgentService] execute_tool '#{tc['tool']}' failed: #{e.message}")
@@ -319,6 +343,17 @@ class ChatAgentService
       lines << "   Experience: #{c[:total_experience_years]} years"
       lines << "   Top skills: #{skills_str}"
     end
+    lines.join("\n")
+  end
+
+  def format_export(result)
+    lines = [
+      "CSV EXPORT READY",
+      "Filename: #{result[:filename]}",
+      "Expires in: #{result[:expires_in]}"
+    ]
+    lines << "Records: #{result[:record_count]}" if result[:record_count]
+    lines << "(A download card will be shown to the user automatically. Do not include a download link in your HTML response.)"
     lines.join("\n")
   end
 

@@ -231,12 +231,21 @@ export type ChatStats = {
   data: Record<string, unknown>;
 };
 
+export type ChatCsvExport = {
+  token: string;
+  filename: string;
+  download_url: string;
+  record_count?: number;
+  expires_in: string;
+};
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
   candidates?: ChatCandidateSummary[];
   stats?: ChatStats;
+  exports?: ChatCsvExport[];
   timestamp: string;
 };
 

@@ -18,6 +18,8 @@ import {
   SearchIcon,
   BarChart3Icon,
   MessageSquareIcon,
+  DownloadIcon,
+  FileTextIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +32,7 @@ import {
   ChatSession,
   ChatCandidateSummary,
   ChatStats,
+  ChatCsvExport,
 } from "@/lib/api";
 
 // ── HTML response renderer ────────────────────────────────────────────────────
@@ -187,6 +190,40 @@ function StatsCard({ stats }: { stats: ChatStats }) {
   );
 }
 
+// ── CSV download card ────────────────────────────────────────────────────────
+
+const BACKEND_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+function CsvDownloadCard({ exportData }: { exportData: ChatCsvExport }) {
+  // download_url is an absolute path like /api/v1/sourcing/exports/csv?token=...
+  const fullUrl = `${BACKEND_BASE}${exportData.download_url}`;
+
+  return (
+    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mt-2 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <FileTextIcon className="w-4 h-4 text-emerald-600" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-emerald-800 truncate">{exportData.filename}</p>
+          <p className="text-xs text-emerald-600">
+            {exportData.record_count ? `${exportData.record_count} records · ` : ""}
+            Link expires in {exportData.expires_in}
+          </p>
+        </div>
+      </div>
+      <a
+        href={fullUrl}
+        download={exportData.filename}
+        className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+      >
+        <DownloadIcon className="w-3.5 h-3.5" />
+        Download CSV
+      </a>
+    </div>
+  );
+}
+
 // ── Message bubble ────────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
@@ -232,6 +269,15 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
         {/* Stats card */}
         {!isUser && msg.stats && <StatsCard stats={msg.stats} />}
+
+        {/* CSV download cards */}
+        {!isUser && msg.exports && msg.exports.length > 0 && (
+          <div className="space-y-2 w-full">
+            {msg.exports.map((exp, i) => (
+              <CsvDownloadCard key={i} exportData={exp} />
+            ))}
+          </div>
+        )}
 
         {/* Suggestion chips */}
         {!isUser && suggestions.length > 0 && (

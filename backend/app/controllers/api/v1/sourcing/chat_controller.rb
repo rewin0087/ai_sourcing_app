@@ -29,7 +29,8 @@ module Api
           user_msg = build_msg("user", user_text)
           assistant_msg = build_msg("assistant", result[:content],
                                     candidates: result[:candidates],
-                                    stats: result[:stats])
+                                    stats: result[:stats],
+                                    exports: result[:exports])
 
           session.messages = (session.messages + [user_msg, assistant_msg]).last(200)
           session.title = user_text.truncate(60) if session.title.blank?
@@ -70,14 +71,15 @@ module Api
           end
         end
 
-        def build_msg(role, content, candidates: nil, stats: nil)
+        def build_msg(role, content, candidates: nil, stats: nil, exports: nil)
           {
-            "id" => SecureRandom.uuid,
-            "role" => role,
-            "content" => content,
+            "id"         => SecureRandom.uuid,
+            "role"       => role,
+            "content"    => content,
             "candidates" => candidates,
-            "stats" => stats,
-            "timestamp" => Time.current.iso8601
+            "stats"      => stats,
+            "exports"    => exports,
+            "timestamp"  => Time.current.iso8601
           }.compact
         end
 
