@@ -332,17 +332,13 @@ class CandidateAnalyticsService
 
   private
 
-  # Urlsafe verifier — produces tokens with only [A-Za-z0-9_-] characters.
-  # No percent-encoding needed, safe to embed in URLs and HTML as-is.
   def verifier
     self.class.verifier
   end
 
   def self.verifier
-    Rails.application.message_verifier(:csv_export, serializer: JSON, url_safe: true)
-  rescue ArgumentError
-    # url_safe option not supported in this Rails version — fall back to standard verifier
-    Rails.application.message_verifier(:csv_export, serializer: JSON)
+    secret = Rails.application.key_generator.generate_key("csv_export", 32)
+    ActiveSupport::MessageVerifier.new(secret, serializer: JSON)
   end
 
   def export_filename(type, params)
