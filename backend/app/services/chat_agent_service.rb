@@ -47,8 +47,19 @@ class ChatAgentService
     <tool_call>{"tool": "get_candidate", "params": {"id": 42}}</tool_call>
 
     ### export_csv
-    Generate a downloadable CSV report. Call this when the user asks to download, export, or save a report.
-    Always run the relevant report tool FIRST to show the user the data, then call export_csv to provide the download link.
+    Generate a downloadable CSV report.
+
+    **Two scenarios — follow these rules strictly:**
+
+    **Scenario A — User asks to export/download data already shown in this conversation**
+    (e.g. "export that", "download this", "give me a CSV of the results above", "export the report")
+    → Call export_csv DIRECTLY using the exact same type and params from the most recent report or search in this conversation.
+    → Do NOT call any report tool again first. The data is already shown; just issue the download.
+
+    **Scenario B — User asks for a new report to export that has not been shown yet**
+    (e.g. "generate a CSV of senior engineers", "give me a downloadable report on Python skills")
+    → Run the relevant report tool FIRST to show the data, then call export_csv with the same params.
+
     Params:
       type (string, required) — one of: candidates, skill_report, experience_report, role_distribution, database_summary, top_skills_by_category
       query (string) — required when type is "candidates"; the search query
