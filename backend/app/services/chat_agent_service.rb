@@ -99,6 +99,11 @@ class ChatAgentService
 
     Output ONLY the HTML body content. No <html>, <head>, or <body> wrappers.
 
+    ## CRITICAL — Never expose raw data
+    - NEVER include raw JSON, code blocks, tool call syntax, or tool result text in your response.
+    - Tool results are internal context for you to interpret. Summarize, narrate, and present the data — do not paste or echo it.
+    - If you see "Tool Results:" or JSON in your draft response, remove it entirely before outputting.
+
     ## Suggestions
     At the very end of every substantive response, append this exact HTML comment containing a valid JSON array of 2-3 follow-up question strings:
     <!-- suggestions: ["Follow-up question 1?", "Follow-up question 2?", "Follow-up question 3?"] -->
@@ -150,7 +155,7 @@ class ChatAgentService
       tool_results_block = tool_results_parts.join("\n\n")
       messages << {
         role: "user",
-        content: "Here are the tool results:\n\n#{tool_results_block}\n\nNow provide your final response to the user based on this data."
+        content: "INTERNAL TOOL DATA (do not repeat or quote this in your response — interpret it and present it as formatted HTML only):\n\n#{tool_results_block}\n\nNow write your final response to the user. Use only valid HTML. Do not include any raw data, JSON, or tool result text."
       }
     end
 
