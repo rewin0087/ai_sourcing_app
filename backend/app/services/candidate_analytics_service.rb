@@ -318,6 +318,32 @@ class CandidateAnalyticsService
     }
   end
 
+  # Generates a CSV from already-fetched data (no re-query) — used when the agent
+  # has data from this turn that matches exactly what was shown to the user.
+  def export_csv_with_data(type:, data:, filename_params: {})
+    filename     = export_filename(type, filename_params)
+    csv_content  = CsvExportService.new.generate(type, data)
+    record_count = extract_record_count(type, data)
+
+    uuid       = SecureRandom.uuid
+    export_dir = Rails.root.join("tmp", "exports")
+    FileUtils.mkdir_p(export_dir)
+    File.write(export_dir.join("#{uuid}.csv"), csv_content)
+    cleanup_expired_exports(export_dir)
+
+    expires_at = 15.minutes.from_now.to_i
+    payload    = { uuid: uuid, filename: filename, expires_at: expires_at }
+    token      = verifier.generate(payload)
+
+    {
+      token:        token,
+      filename:     filename,
+      download_url: "/api/v1/sourcing/exports/csv?token=#{token}",
+      record_count: record_count,
+      expires_in:   "15 minutes"
+    }
+  end
+
   # Called by ExportsController — verifies the token and serves the pre-generated file.
   def self.generate_csv_from_token(raw_token)
     payload = verifier.verify(raw_token)

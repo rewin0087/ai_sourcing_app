@@ -141,7 +141,7 @@ class ChatAgentService
       tool_results_parts = []
 
       tool_calls.each do |tc|
-        result = execute_tool(tc)
+        result = execute_tool(tc, accumulated_candidates: accumulated_candidates, accumulated_stats: accumulated_stats)
         accumulated_candidates = result[:candidates] if result[:candidates]
         accumulated_stats      = result[:stats]      if result[:stats]
         accumulated_exports << result[:export]       if result[:export]
@@ -205,7 +205,7 @@ class ChatAgentService
     text.gsub(/<tool_call>.*?<\/tool_call>/m, "").strip
   end
 
-  def execute_tool(tc)
+  def execute_tool(tc, accumulated_candidates: nil, accumulated_stats: nil)
     tool = tc["tool"].to_s
     params = tc["params"] || {}
 
@@ -251,7 +251,20 @@ class ChatAgentService
       type  = params["type"].to_s.strip
       return { text: "Error: 'type' parameter is required for export_csv." } if type.blank?
       kw = params.transform_keys(&:to_sym).except(:type)
-      result = @analytics.export_csv(type: type, **kw)
+
+      # Use already-fetched data from this turn so the export matches exactly what was shown.
+      existing_data =
+        if type == "candidates" && accumulated_candidates&.any?
+          accumulated_candidates
+        elsif type != "candidates" && accumulated_stats&.dig(:type) == type
+          accumulated_stats[:data]
+        end
+
+      result = if existing_data
+                 @analytics.export_csv_with_data(type: type, data: existing_data, filename_params: kw)
+               else
+                 @analytics.export_csv(type: type, **kw)
+               end
       { text: format_export(result), export: result }
 
     else
