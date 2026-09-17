@@ -291,37 +291,45 @@ class CandidateAnalyticsService
 
   # ── CSV Export ─────────────────────────────────────────────────────────────
 
-  # Returns a signed, URL-safe token embedding the export parameters.
-  # The token uses urlsafe Base64 (no +, /, = characters) so it survives
-  # being embedded in URLs, HTML, and LLM responses without encoding issues.
+  # Generates the CSV immediately from the current query result and writes it
+  # to tmp/exports/ so the download serves the exact same data that was shown.
   def export_csv(type:, **params)
-    build_export_data(type, params)  # validate early before issuing token
+    data, filename = build_export_data(type, params)
+    csv_content    = CsvExportService.new.generate(type, data)
+    record_count   = extract_record_count(type, data)
 
-    payload = { type: type.to_s, params: params.transform_keys(&:to_s), expires_at: 15.minutes.from_now.to_i }
-    token = verifier.generate(payload)
+    uuid       = SecureRandom.uuid
+    export_dir = Rails.root.join("tmp", "exports")
+    FileUtils.mkdir_p(export_dir)
+    File.write(export_dir.join("#{uuid}.csv"), csv_content)
+
+    cleanup_expired_exports(export_dir)
+
+    expires_at = 15.minutes.from_now.to_i
+    payload    = { uuid: uuid, filename: filename, expires_at: expires_at }
+    token      = verifier.generate(payload)
 
     {
       token:        token,
-      filename:     export_filename(type, params),
+      filename:     filename,
       download_url: "/api/v1/sourcing/exports/csv?token=#{token}",
-      record_count: nil,
+      record_count: record_count,
       expires_in:   "15 minutes"
     }
   end
 
-  # Called by ExportsController — verifies the signed token and generates the CSV.
+  # Called by ExportsController — verifies the token and serves the pre-generated file.
   def self.generate_csv_from_token(raw_token)
     payload = verifier.verify(raw_token)
     payload = payload.transform_keys(&:to_sym) if payload.respond_to?(:transform_keys)
     raise "Export link has expired." if Time.now.to_i > payload[:expires_at].to_i
 
-    type   = payload[:type].to_s
-    params = (payload[:params] || {}).transform_keys(&:to_sym)
+    uuid      = payload[:uuid].to_s
+    filename  = payload[:filename].to_s
+    file_path = Rails.root.join("tmp", "exports", "#{uuid}.csv")
+    raise "Export file not found or has expired." unless File.exist?(file_path)
 
-    svc = new
-    data, filename = svc.send(:build_export_data, type, params)
-    csv  = CsvExportService.new.generate(type, data)
-    { csv: csv, filename: filename }
+    { csv: File.read(file_path), filename: filename }
   rescue ActiveSupport::MessageVerifier::InvalidSignature,
          ActiveSupport::MessageVerifier::InvalidMessage
     nil
@@ -339,6 +347,27 @@ class CandidateAnalyticsService
   def self.verifier
     secret = Rails.application.key_generator.generate_key("csv_export", 32)
     ActiveSupport::MessageVerifier.new(secret, serializer: JSON)
+  end
+
+  def extract_record_count(type, data)
+    case type.to_s
+    when "candidates"            then Array(data).length
+    when "skill_report"          then data[:total_candidates_with_skill]
+    when "experience_report"     then data[:levels]&.values&.sum
+    when "role_distribution"     then data.values.sum
+    when "database_summary"      then data[:total_candidates]
+    when "top_skills_by_category" then data.values.sum(&:length)
+    end
+  rescue StandardError
+    nil
+  end
+
+  def cleanup_expired_exports(export_dir)
+    Dir.glob(export_dir.join("*.csv")).each do |path|
+      File.delete(path) if File.mtime(path) < 20.minutes.ago
+    end
+  rescue StandardError
+    # non-critical — ignore cleanup errors
   end
 
   def export_filename(type, params)

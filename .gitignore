@@ -28,6 +28,7 @@ backend/tmp/**
 !backend/tmp/.keep
 !backend/tmp/pids/.keep
 !backend/tmp/storage/.keep
+backend/tmp/exports/
 backend/storage/
 backend/public/system/
 backend/public/uploads/
