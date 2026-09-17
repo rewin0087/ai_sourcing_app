@@ -17,10 +17,8 @@ module Api
 
           session = find_or_create_session
 
-          # Extract LLM-safe history (role + content only, last 20 turns)
-          history = session.messages.last(20).map do |m|
-            { "role" => m["role"], "content" => m["content"] }
-          end
+          # Pass full message objects so the agent can seed from last shown candidates/stats
+          history = session.messages.last(20)
 
           # Run the agent
           result = ChatAgentService.new.process(user_text, history)

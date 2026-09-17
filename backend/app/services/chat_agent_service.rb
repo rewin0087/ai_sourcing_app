@@ -119,9 +119,11 @@ class ChatAgentService
   def process(user_message, history = [])
     messages = build_messages(history, user_message)
 
-    accumulated_candidates = nil
-    accumulated_stats = nil
-    accumulated_exports = []
+    # Seed from the last assistant message so cross-turn exports reference what was shown
+    last_assistant = history.reverse.find { |m| (m["role"] || m[:role]).to_s == "assistant" }
+    accumulated_candidates = deep_symbolize(last_assistant&.dig("candidates"))
+    accumulated_stats      = deep_symbolize(last_assistant&.dig("stats"))
+    accumulated_exports    = []
 
     MAX_ITERATIONS.times do
       response_text = @ai.chat_complete(messages, max_tokens: 4096, timeout: 120)
@@ -176,6 +178,14 @@ class ChatAgentService
   end
 
   private
+
+  def deep_symbolize(obj)
+    case obj
+    when Hash  then obj.transform_keys(&:to_sym).transform_values { |v| deep_symbolize(v) }
+    when Array then obj.map { |v| deep_symbolize(v) }
+    else obj
+    end
+  end
 
   def build_messages(history, user_message)
     msgs = [{ role: "system", content: SYSTEM_PROMPT }]
