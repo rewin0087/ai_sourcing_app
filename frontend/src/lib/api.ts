@@ -271,10 +271,80 @@ export type RefinedJobDescription = {
   formatted_text: string;
 };
 
+// ── CV match types ──────────────────────────────────────────────────────────
+
+export type CvMatchInput = { text?: string; file?: File | null };
+
+export type CvMatchCategory = { score: number; rationale: string; weight: number };
+
+export type CvMatchResult = {
+  overall_score: number;
+  match_level: "excellent" | "strong" | "moderate" | "weak";
+  summary: string;
+  recommendation: "strong_yes" | "yes" | "maybe" | "no";
+  recommendation_reason: string;
+  job: { title?: string; experience_level?: string; required_years?: number };
+  candidate: { name?: string; current_title?: string; total_experience_years?: number };
+  category_scores: Record<"skills" | "experience" | "responsibilities" | "education", CvMatchCategory>;
+  skills_analysis: {
+    skill: string;
+    importance: "required" | "preferred";
+    status: "matched" | "partial" | "missing";
+    evidence: string;
+  }[];
+  experience_analysis: {
+    assessment?: string;
+    relevant_roles?: {
+      title: string;
+      company: string;
+      duration?: string;
+      relevance: "high" | "medium" | "low";
+      note?: string;
+    }[];
+  };
+  strengths: { title: string; detail: string }[];
+  gaps: { title: string; detail: string; severity: "high" | "medium" | "low" }[];
+  improvements: { title: string; detail: string; impact: "high" | "medium" | "low" }[];
+  interview_questions: string[];
+  interview_prep: CvInterviewPrep;
+};
+
+export type CvInterviewPrep = {
+  role_type: "technical" | "non_technical";
+  focus_areas: { topic: string; reason: string; priority: "high" | "medium" | "low" }[];
+  coding_challenges: {
+    title: string;
+    difficulty: "easy" | "medium" | "hard";
+    problem: string;
+    skills_tested: string[];
+    hints: string[];
+    approach: string;
+  }[];
+  algorithms: { name: string; relevance: string; complexity?: string }[];
+  theory_questions: { question: string; topic: string; key_points: string[] }[];
+  applied_scenarios: {
+    scenario: string;
+    type: "system_design" | "debugging" | "architecture" | "problem_solving" | "case_study";
+    what_interviewers_look_for: string[];
+  }[];
+};
+
 // Sourcing endpoints
 export const sourcingApi = {
   refineJob: (narrative: string) =>
     api.post<{ data: RefinedJobDescription }>("/sourcing/refine-job", { narrative }),
+
+  matchCv: (jd: CvMatchInput, cv: CvMatchInput) => {
+    const form = new FormData();
+    if (jd.file) form.append("jd_file", jd.file);
+    else form.append("jd_text", jd.text ?? "");
+    if (cv.file) form.append("cv_file", cv.file);
+    else form.append("cv_text", cv.text ?? "");
+    return api.post<{ data: CvMatchResult }>("/sourcing/cv-match", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 270000,
+    });
+  },
 
   // Chat
   getChatSessions: () =>

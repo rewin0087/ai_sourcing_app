@@ -14,6 +14,7 @@ import {
   XIcon,
   WandSparklesIcon,
   BotIcon,
+  FileCheck2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Dashboard", href: "/sourcer", icon: LayoutDashboardIcon, exact: true },
   { label: "AI Assistant", href: "/sourcer/chat", icon: BotIcon },
   { label: "Refine JD", href: "/sourcer/refine", icon: WandSparklesIcon },
+  { label: "CV Match", href: "/sourcer/match", icon: FileCheck2Icon },
   { label: "Find Candidates", href: "/sourcer/search", icon: SearchIcon },
   { label: "Candidates DB", href: "/sourcer/candidates", icon: UsersIcon },
   { label: "Job Descriptions", href: "/sourcer/jobs", icon: FileTextIcon },

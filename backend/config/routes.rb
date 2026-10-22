@@ -26,6 +26,7 @@ Rails.application.routes.draw do
       namespace :sourcing do
         post "parse-job", to: "jobs#parse"
         post "refine-job", to: "jobs#refine"
+        post "cv-match", to: "cv_matches#create"
         post "search", to: "candidates#search"
         get "candidates", to: "candidates#index"
         get "candidates/:id", to: "candidates#show"
