@@ -306,7 +306,8 @@ export type CvMatchResult = {
   gaps: { title: string; detail: string; severity: "high" | "medium" | "low" }[];
   improvements: { title: string; detail: string; impact: "high" | "medium" | "low" }[];
   interview_questions: string[];
-  interview_prep: CvInterviewPrep;
+  interview_prep: CvInterviewPrep | null;
+  interview_prep_error?: string | null;
 };
 
 export type CvInterviewPrep = {
