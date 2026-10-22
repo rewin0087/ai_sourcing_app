@@ -158,6 +158,8 @@ export type MatchResult = {
     experience_match: number;
   };
   rank: number;
+  rrf_score?: number;
+  retrieval_ranks?: Partial<Record<"semantic" | "keyword" | "skills" | "ai", number | null>>;
   matched_skills: string[];
   missing_skills: string[];
   ai_reasoning?: string;

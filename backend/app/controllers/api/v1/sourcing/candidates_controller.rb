@@ -132,6 +132,8 @@ module Api
               experience_match: (r[:experience_match_score] * 100).round(1)
             },
             rank: r[:rank],
+            rrf_score: r[:rrf_score],
+            retrieval_ranks: r[:retrieval_ranks],
             matched_skills: r[:matched_skills],
             missing_skills: r[:missing_skills],
             ai_reasoning: r[:ai_reasoning]

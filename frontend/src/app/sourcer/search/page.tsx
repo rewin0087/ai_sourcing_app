@@ -28,7 +28,36 @@ import { sourcingApi, MatchResult } from "@/lib/api";
 const rankColors = ["text-amber-500", "text-slate-400", "text-amber-700"];
 const rankBg = ["bg-amber-50 border-amber-200", "bg-slate-50 border-slate-200", "bg-amber-50/60 border-amber-100"];
 
-function ScoreCircle({ score }: { score: number }) {
+const RETRIEVAL_LABELS = [
+  { key: "semantic", label: "Semantic" },
+  { key: "keyword", label: "Keyword" },
+  { key: "skills", label: "Skills" },
+  { key: "ai", label: "AI" },
+] as const;
+
+function RetrievalRanks({ ranks }: { ranks: MatchResult["retrieval_ranks"] }) {
+  if (!ranks) return null;
+  const hits = RETRIEVAL_LABELS.filter((r) => ranks[r.key]);
+  if (hits.length === 0) return null;
+  return (
+    <div
+      className="flex flex-wrap items-center gap-1.5 mb-3"
+      title="Final rank combines each search method's ranking using Reciprocal Rank Fusion"
+    >
+      <span className="text-xs text-slate-400">Ranked by:</span>
+      {hits.map((r) => (
+        <span
+          key={r.key}
+          className="text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded-full px-2 py-0.5"
+        >
+          {r.label} <span className="font-semibold text-slate-800">#{ranks[r.key]}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ScoreCircle({ score, aiReviewed }: { score: number; aiReviewed: boolean }) {
   const color = score >= 70 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-red-500";
   const display = Number.isInteger(score) ? score : score.toFixed(1);
   return (
@@ -37,7 +66,12 @@ function ScoreCircle({ score }: { score: number }) {
       <div className="w-20">
         <Progress value={score} className="h-1.5" />
       </div>
-      <span className="text-xs text-slate-400">overall</span>
+      <span
+        className="text-xs text-slate-400"
+        title={aiReviewed ? "Fit score from AI review of this candidate" : "Estimated from skills, experience and similarity — not AI-reviewed"}
+      >
+        {aiReviewed ? "AI fit" : "estimated"}
+      </span>
     </div>
   );
 }
@@ -292,6 +326,8 @@ export default function SourcerSearchPage() {
                           </div>
                         )}
 
+                        <RetrievalRanks ranks={result.retrieval_ranks} />
+
                         {/* Score bars */}
                         <div className="grid grid-cols-3 gap-3 mb-3">
                           {[
@@ -350,7 +386,7 @@ export default function SourcerSearchPage() {
 
                       {/* Score + actions */}
                       <div className="flex sm:flex-col items-center gap-4 flex-shrink-0">
-                        <ScoreCircle score={result.scores.overall} />
+                        <ScoreCircle score={result.scores.overall} aiReviewed={!!result.ai_reasoning} />
                         <div className="flex gap-2 sm:flex-col">
                           <Link href={`/sourcer/candidates/${result.candidate.id}`} target="_blank">
                             <Button
